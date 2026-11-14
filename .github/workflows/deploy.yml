@@ -1,0 +1,49 @@
+name: Terraform CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: validate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Format Check
+        run: terraform fmt -check
+      - name: Terraform Validate
+        run: terraform validate
+
+  plan:
+    name: plan
+    needs: validate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Plan
+        run: terraform plan -input=false
+
+  apply:
+    name: apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
+      - name: Verify Container
+        run: docker ps --filter name=it7027c-cicd-sp-web
